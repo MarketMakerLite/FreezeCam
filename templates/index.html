@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS LagCam Controller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // Initialize Socket.IO connection
+        const socket = io();
+
+                // Handle countdown updates
+        socket.on('countdown_update', function(data) {
+            const countdownElement = document.getElementById('countdown');
+            const recordingTimerElement = document.getElementById('recording-timer');
+
+            if (data.type === 'pre') {
+                countdownElement.textContent = data.count > 0 ? `Recording starts in ${data.count}...` : '';
+                countdownElement.style.display = data.count > 0 ? 'block' : 'none';
+                recordingTimerElement.style.display = 'none';
+            } else if (data.type === 'recording') {
+                countdownElement.style.display = 'none';
+                recordingTimerElement.style.display = 'block';
+                if (data.count > 0) {
+                    const minutes = Math.floor(data.count / 60);
+                    const seconds = Math.floor(data.count % 60);
+                    const tenths = Math.floor((data.count % 1) * 10);
+                    const timeStr = minutes > 0
+                        ? `${minutes}:${seconds.toString().padStart(2, '0')}.${tenths}`
+                        : `${seconds}.${tenths}`;
+                    recordingTimerElement.textContent = `Recording: ${timeStr}s`;
+                } else {
+                    recordingTimerElement.textContent = '';
+                }
+            }
+        });
+
+
+        // Handle errors
+        socket.on('error', function(data) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = `❌ Error: ${data.message}`;
+            statusElement.classList.remove('text-green-500');
+            statusElement.classList.add('text-red-500');
+        });
+
+        async function sendRequest(endpoint) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json();
+                const statusElement = document.getElementById('status');
+                if (response.ok) {
+                    statusElement.textContent = `✅ Success: ${data.status}`;
+                    statusElement.classList.remove('text-red-500');
+                    statusElement.classList.add('text-green-500');
+                } else {
+                    statusElement.textContent = `❌ Error: ${data.status}`;
+                    statusElement.classList.remove('text-green-500');
+                    statusElement.classList.add('text-red-500');
+                }
+            } catch (error) {
+                console.error('Request failed:', error);
+                const statusElement = document.getElementById('status');
+                statusElement.textContent = `❌ Network Error`;
+                statusElement.classList.add('text-red-500');
+            }
+        }
+
+        function startScript() {
+            // Reset displays
+            document.getElementById('countdown').textContent = '';
+            document.getElementById('recording-timer').textContent = '';
+            sendRequest('/start');
+        }
+
+        function stopScript() {
+            // Clear displays
+            document.getElementById('countdown').textContent = '';
+            document.getElementById('recording-timer').textContent = '';
+            sendRequest('/stop');
+        }
+    </script>
+</head>
+
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-500">
+    <div class="w-full max-w-sm p-6 bg-white rounded-2xl shadow-lg text-center transform transition-all duration-300 hover:scale-105">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">🎥 OBS LagCam Controller</h1>
+
+        <!-- Countdown and Timer Displays -->
+        <div class="space-y-2 mb-4">
+            <p id="countdown" class="text-xl font-semibold text-indigo-600" style="display: none;"></p>
+            <p id="recording-timer" class="text-xl font-semibold text-green-600" style="display: none;"></p>
+        </div>
+
+        <div class="space-y-4">
+            <button onclick="startScript()" class="w-full px-4 py-3 bg-green-500 text-white font-semibold rounded-xl shadow-md hover:bg-green-600 transition focus:outline-none focus:ring-2 focus:ring-green-300">
+                ▶️ Start Recording & Playback
+            </button>
+            <button onclick="stopScript()" class="w-full px-4 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-md hover:bg-red-600 transition focus:outline-none focus:ring-2 focus:ring-red-300">
+                ⏹️ Stop Playback
+            </button>
+        </div>
+        <p id="status" class="mt-6 text-lg font-medium text-gray-700"></p>
+    </div>
+</body>
+
+</html>
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>OBS LagCam Controller</title>-->
+<!--    <script src="https://cdn.tailwindcss.com"></script>-->
+<!--    <script>-->
+<!--        async function sendRequest(endpoint) {-->
+<!--            try {-->
+<!--                const response = await fetch(endpoint, {-->
+<!--                    method: 'POST',-->
+<!--                    headers: {-->
+<!--                        'Content-Type': 'application/json',-->
+<!--                    },-->
+<!--                });-->
+
+<!--                const data = await response.json();-->
+<!--                const statusElement = document.getElementById('status');-->
+<!--                if (response.ok) {-->
+<!--                    statusElement.textContent = `✅ Success: ${data.status}`;-->
+<!--                    statusElement.classList.remove('text-red-500');-->
+<!--                    statusElement.classList.add('text-green-500');-->
+<!--                } else {-->
+<!--                    statusElement.textContent = `❌ Error: ${data.status}`;-->
+<!--                    statusElement.classList.remove('text-green-500');-->
+<!--                    statusElement.classList.add('text-red-500');-->
+<!--                }-->
+<!--            } catch (error) {-->
+<!--                console.error('Request failed:', error);-->
+<!--                const statusElement = document.getElementById('status');-->
+<!--                statusElement.textContent = `❌ Network Error`;-->
+<!--                statusElement.classList.add('text-red-500');-->
+<!--            }-->
+<!--        }-->
+
+<!--        function startScript() {-->
+<!--            sendRequest('/start');-->
+<!--        }-->
+
+<!--        function stopScript() {-->
+<!--            sendRequest('/stop');-->
+<!--        }-->
+<!--    </script>-->
+<!--</head>-->
+
+<!--<body class="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-500">-->
+<!--    <div class="w-full max-w-sm p-6 bg-white rounded-2xl shadow-lg text-center transform transition-all duration-300 hover:scale-105">-->
+<!--        <h1 class="text-3xl font-bold mb-6 text-gray-800">🎥 OBS LagCam Controller</h1>-->
+<!--        <div class="space-y-4">-->
+<!--            <button onclick="startScript()" class="w-full px-4 py-3 bg-green-500 text-white font-semibold rounded-xl shadow-md hover:bg-green-600 transition focus:outline-none focus:ring-2 focus:ring-green-300">-->
+<!--                ▶️ Start Recording & Playback-->
+<!--            </button>-->
+<!--            <button onclick="stopScript()" class="w-full px-4 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-md hover:bg-red-600 transition focus:outline-none focus:ring-2 focus:ring-red-300">-->
+<!--                ⏹️ Stop Playback-->
+<!--            </button>-->
+<!--        </div>-->
+<!--        <p id="status" class="mt-6 text-lg font-medium text-gray-700"></p>-->
+<!--    </div>-->
+<!--</body>-->
+
+<!--</html>-->
+
+
+<!--&lt;!&ndash;<!DOCTYPE html>&ndash;&gt;-->
+<!--&lt;!&ndash;<html lang="en">&ndash;&gt;-->
+<!--&lt;!&ndash;<head>&ndash;&gt;-->
+<!--&lt;!&ndash;    <meta charset="UTF-8">&ndash;&gt;-->
+<!--&lt;!&ndash;    <title>OBS LagCam Controller</title>&ndash;&gt;-->
+<!--&lt;!&ndash;    <script>&ndash;&gt;-->
+<!--&lt;!&ndash;        async function sendRequest(endpoint) {&ndash;&gt;-->
+<!--&lt;!&ndash;            try {&ndash;&gt;-->
+<!--&lt;!&ndash;                const response = await fetch(endpoint, {&ndash;&gt;-->
+<!--&lt;!&ndash;                    method: 'POST',&ndash;&gt;-->
+<!--&lt;!&ndash;                    headers: {&ndash;&gt;-->
+<!--&lt;!&ndash;                        'Content-Type': 'application/json',&ndash;&gt;-->
+<!--&lt;!&ndash;                    },&ndash;&gt;-->
+<!--&lt;!&ndash;                });&ndash;&gt;-->
+
+<!--&lt;!&ndash;                const data = await response.json();&ndash;&gt;-->
+<!--&lt;!&ndash;                const statusElement = document.getElementById('status');&ndash;&gt;-->
+<!--&lt;!&ndash;                if (response.ok) {&ndash;&gt;-->
+<!--&lt;!&ndash;                    statusElement.textContent = `Success: ${data.status}`;&ndash;&gt;-->
+<!--&lt;!&ndash;                    statusElement.style.color = 'green';&ndash;&gt;-->
+<!--&lt;!&ndash;                } else {&ndash;&gt;-->
+<!--&lt;!&ndash;                    statusElement.textContent = `Error: ${data.status}`;&ndash;&gt;-->
+<!--&lt;!&ndash;                    statusElement.style.color = 'red';&ndash;&gt;-->
+<!--&lt;!&ndash;                }&ndash;&gt;-->
+<!--&lt;!&ndash;            } catch (error) {&ndash;&gt;-->
+<!--&lt;!&ndash;                console.error('Request failed:', error);&ndash;&gt;-->
+<!--&lt;!&ndash;            }&ndash;&gt;-->
+<!--&lt;!&ndash;        }&ndash;&gt;-->
+
+<!--&lt;!&ndash;        function startScript() {&ndash;&gt;-->
+<!--&lt;!&ndash;            sendRequest('/start');&ndash;&gt;-->
+<!--&lt;!&ndash;        }&ndash;&gt;-->
+
+<!--&lt;!&ndash;        function stopScript() {&ndash;&gt;-->
+<!--&lt;!&ndash;            sendRequest('/stop');&ndash;&gt;-->
+<!--&lt;!&ndash;        }&ndash;&gt;-->
+<!--&lt;!&ndash;    </script>&ndash;&gt;-->
+<!--&lt;!&ndash;</head>&ndash;&gt;-->
+<!--&lt;!&ndash;<body>&ndash;&gt;-->
+<!--&lt;!&ndash;    <h1>OBS LagCam Controller</h1>&ndash;&gt;-->
+<!--&lt;!&ndash;    <button onclick="startScript()">Start Recording & Playback</button>&ndash;&gt;-->
+<!--&lt;!&ndash;    <button onclick="stopScript()">Stop Playback</button>&ndash;&gt;-->
+<!--&lt;!&ndash;    <p id="status"></p>&ndash;&gt;-->
+<!--&lt;!&ndash;</body>&ndash;&gt;-->
+<!--&lt;!&ndash;</html>&ndash;&gt;-->
